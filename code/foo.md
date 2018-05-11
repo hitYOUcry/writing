@@ -20,7 +20,12 @@ Linux/macOS平台官方推荐使用SDKMAN工具安装Groovy。具体命令行命
 `$ sdk install groovy`  
 `$ groovy -version`
 
-更详细的信息就不搬移了，参考上边的下载链接页面内容即可。
+更详细的信息就不搬移了，参考上边的下载链接页面内容即可。  
+安装完成之后，找个目录，新建hello.groovy文件，并添加一行代码：
+```groovy
+println "hello groovy"
+```
+在该目录下打开终端（命令行），执行命令`groovy hello.groovy`，看到屏幕上输出的`hello groovy`表示安装就大功告成了。
 
 ### 2.语法 ###
 Groovy与Java最大的不同是实现了动态类型语言的特性，让代码编写和写脚本一样简单（实际上Groovy就是脚本语言）。
@@ -226,6 +231,29 @@ assert c_2(1) == null
 ```
 从示例也可以看出：闭包的返回值可以显示的用return语句执行（类型不限），没有return语句时，默认返回最后一行代码的值（println函数返回值类型为void，因此在c_2中我们得到null）。
 
+#### 闭包是一个对象 ####  
+如题，这个其实也不需要再强调，但是如果不熟悉闭包，当代码把它当做一个对象处理时，有可能会让人觉得迷糊：
+```groovy
+def a = {Closure c ->
+    c.call()
+}
+
+a {
+    println "I am from closure"//花括号表示一个闭包，它作为参数传给了闭包a
+}
+```
+a是一个闭包，调用时传入一个闭包作为参数（是不是渐渐地看到了Gradle的样子）。同理，函数也一样：
+```groovy
+def a(Closure c){
+    c.call()
+}
+
+a {
+    println "I am from closure"//花括号表示一个闭包，它作为参数传给了闭包a
+}
+```
+习惯这种写法，就很好理解Gradle中那种DSL配置风格。
+
 
 这么来看闭包是不是挺简单的，当做一个对象即可，调用方式多看几遍也就熟悉了。  
 
@@ -269,12 +297,74 @@ class A {
 def a = new A()
 a.run()
 ```
-一切尽在代码中(要理解闭包的返回值以及this/owner的指向关系)... 
+一切尽在代码中(要理解闭包的返回值以及this/owner的指向关系)...  
+
 **delegate**  
 确切的说，delegate是闭包的一个扩展字段。  
-本节的小标题为代理策略，说的就是给闭包设置不同的代理方式，它的delegate字段会指向不同的对象。默认情况下delegate指向owner字段。  
-既然默认情况是指向owner，那么它肯定也是可以指向this的，另外，如果我们手动的给闭包的delegate字段赋值，它也可以指向一个八竿子打不着的对象。  
-那么，给delegate字段指来指去有什么用呢？好玩吗？
+本节的小标题为代理策略，说的就是给闭包设置不同的代理方式，它的delegate字段会指向不同的对象。默认情况下delegate指向owner字段。  既然默认情况是指向owner，那么它肯定也是可以指向this.另外，如果我们手动的给闭包的delegate字段赋值，它也可以指向一个八竿子打不着的对象。  
+那么，给delegate字段指来指去有什么用呢？好玩吗？  
+delegate字段可以辅助解析闭包内解析不出的内容（和owner功能一样，类似于Java中的匿名内部类持有外部类的引用，在匿名内部类中可以直接使用外部类的内容），我们暂且把owner、delegate的这种辅助闭包解析的行为叫做**解析扩展**。什么意思呢，比如闭包的statement中引用了name变量，但是闭包内并没有定义name变量，这时如果delegate字段中定义了name变量，那闭包中引用name就不会出错：
+```groovy
+def name = "haha"
+def closure = {
+    //可以正常调用，因为delegate指向owner，
+    //owner指向脚本所在的类，脚本所在的类有name字段
+    println name 
+}
+closure()
+```
+我们还可以把delgate指向一个自定义的对象，在闭包内就可以调用到这个自定义对象的内容：
+```groovy
+class B {
+    def name = "haha"
+}
+def closure = {
+    //默认情况下delegate=owner，无法调用到name字段
+    //手动把delegate指向B的实例之后就可以正常使用name字段
+    println name 
+}
+closure.delegate = new B()
+closure()
+```
+
+掌握这一点对理解Groovy闭包很重：闭包默认可以引用外部的一些变量，是因为存在delegate字段；这个字段指向不同，闭包内的行为就可以不一样。
+
+**代理策略**  
+从上边的分析可以看出，闭包的owner/delegate字段都可以用来辅助解析闭包。当闭包内的某个方法或字段解析不到时，可以尝试通过owner/delegate解析。  
+闭包的代理策略即用于控制该闭包以何种策略来进行解析扩展。比如：设置为只用owner解析、只用delegate、优先用delegate或者是优先用owner。  
+代码中使用闭包的`resolveStrategy`字段来选择代理策略，具体的代理策略有（默认为OWNER_FIRST）：
+```groovy
+Closure.OWNER_FIRST//优先使用owner
+Closure.DELEGATE_FIRST//优先使用delegate
+Closure.OWNER_ONLY//只使用owner
+Closure.DELEGATE_ONLY//只使用delegate
+
+Closure.TO_SELF//既不是使用owner,也不使用delegate,在定义自己的Closure类型时可能有用
+```
+如上示例，如果我们把闭包`closure`的代理策略改为只使用Owner，那么它将解析不到`name`字段：
+```groovy
+class B {
+    def name = "haha"
+}
+def closure = {
+    //默认情况下delegate=owner，无法调用到name字段
+    //手动把delegate指向B的实例之后就可以正常使用name字段
+    println name 
+}
+closure.delegate = new B()
+closure.resolveStrategy = Closure.OWNER_ONLY //此处设置OWNER_ONLY之后，后续调用闭包抛出异常
+closure()
+```
+
+到这儿Groovy的基本语法和闭包就介绍完了，我们通过一个完整示例。  
+目标实现如下一段代码：  
+```groovy
+
+```
+
+
+
+
 
 
 

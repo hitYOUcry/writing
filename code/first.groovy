@@ -66,18 +66,55 @@
 // assert c_1(1) == 2
 // assert c_2(1) == null
 
-class A {
-    void run() {
-        def closure_1 = {
-            def clousre_2 = {owner}//此处的owner是闭包closure_2的owner对象,它指向闭包closure_1
-            return clousre_2
-        }
-        assert closure_1()() == closure_1//调用闭包closure_1()得到闭包clousre_2，再次调用闭包clousre_2得到闭包clousre_2的owner对象
+// class A {
+//     void run() {
+//         def closure_1 = {
+//             def clousre_2 = {owner}//此处的owner是闭包closure_2的owner对象,它指向闭包closure_1
+//             return clousre_2
+//         }
+//         assert closure_1()() == closure_1//调用闭包closure_1()得到闭包clousre_2，再次调用闭包clousre_2得到闭包clousre_2的owner对象
 
-        assert closure_1.getThisObject() == this//this对象逻辑如上节
+//         assert closure_1.getThisObject() == this//this对象逻辑如上节
 
-        assert closure_1().getOwner() == closure_1//调用闭包closure_1()得到闭包clousre_2,调用闭包clousre_2的getOwner方法得到它的owner对象
+//         assert closure_1().getOwner() == closure_1//调用闭包closure_1()得到闭包clousre_2,调用闭包clousre_2的getOwner方法得到它的owner对象
+//     }
+// }
+// def a = new A()
+// a.run()
+// class B {
+//     def name = "haha"
+// }
+// def closure = {
+//     //默认情况下delegate=owner，无法调用到name字段
+//     //手动把delegate指向B的实例之后就可以正常使用name字段
+//     println name 
+// }
+// closure.delegate = new B()
+// closure.resolveStrategy = Closure.OWNER_ONLY
+// closure()
+
+
+
+// def a = {Closure c ->
+//     c.call()
+// }
+
+// a {
+//     println "I am from closure"//花括号表示一个闭包，它作为参数传给了闭包a
+// }
+
+// def a(Closure c){
+//     c.call()
+// }
+
+// a {
+//     println "I am from closure"//花括号表示一个闭包，它作为参数传给了闭包a
+// }
+email {
+    from "abc@163.com"
+    to "def@qq.com"
+    subject "Secret"
+    body {
+        "Money is no the position, do it!"
     }
 }
-def a = new A()
-a.run()
