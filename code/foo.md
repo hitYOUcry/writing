@@ -279,7 +279,7 @@ a.run()
 **owner**  
 owner指向闭包定义时所在的离闭包最近的**类或者闭包**的示例。
 闭包除了可能定义在某个类中，还可能会在闭包内，这个owner即是指向离本闭包最近的那个类或者闭包。
-是不是很绕，是不是看代码更简单？？好的：
+是不是很绕？是不是看代码更简单？好的我们直接看代码：
 ```groovy
 class A {
     void run() {
@@ -359,8 +359,80 @@ closure()
 到这儿Groovy的基本语法和闭包就介绍完了，我们通过一个完整示例。  
 目标实现如下一段代码：  
 ```groovy
-
+email {
+    from "abc@163.com"
+    to "def@qq.com"
+    subject "Secret"
+    body {
+        content "Money is no the position, do it!"
+    }
+}
 ```
+我们的目的是，在代码中这样调用，最终输出如下内容：
+```groovy
+From : abc@163.com
+To : def@qq.com
+Subject : Secret
+Content : Money is no the position, do it!
+```
+简要分析一下上边这段代码：
+- `email`是一个方法，它的参数类型是闭包类型
+- 传给`email`的闭包可以调用参数为string的`from`/`to`/`subject`/`body`四个方法
+- `body`的处理和`email`一致，是一个以闭包为参数的方法
+- 传给`body`的闭包可以调用参数为string的`content`方法
+
+> `email`/`from`/`to`/`subject`/`body`/`content`这些调用可以看成方法调用，也可以看成是闭包调用（单参数闭包），示例代码把他们看成方法，读者可以自己实现看做闭包的转换。
+
+先看email方法。email本身很好写，定义一个以闭包为参数的方法即可。但是，**如何才内能使这个传入的闭包可以调用`from`/`to`/`subject`/`body`四个方法呢？**  
+答：使用闭包的代理策略。把闭包的delegate字段指向一个对象，该对象具有`from`/`to`/`subject`/`body`等方法，让后指定闭包的代理策略为DELEGATE_ONLY，即可保证在该闭包内调用`from`/`to`/`subject`/`body`等方法是我们指定的方法。
+`body`方法实现同理，完整代码如下：
+```groovy
+class Email {
+    void from(String from){
+        println "From : ${from}" 
+    }
+
+    void to(String to){
+        println "To : ${to}"
+    }
+
+    void subject(String subject){
+        println "Subject : ${subject}"
+    }
+
+    void body(Closure c){
+        c.delegate = new EmailBody();
+        c.resolveStrategy = Closure.DELEGATE_ONLY
+        c.call()
+    }
+
+}
+
+class EmailBody {
+    void content(String content){
+        println "Content : ${content}"
+    }
+}
+
+void email(Closure c){
+    c.delegate = new Email();
+    c.resolveStrategy = Closure.DELEGATE_ONLY
+    c.call()
+}
+
+email {
+    from "abc@163.com"
+    to "def@qq.com"
+    subject "Secret"
+    body {
+        content "Money is no the position, do it!"
+    }
+}
+```
+
+到这儿Groovy的基本语法和闭包介绍就结束了，下文继续介绍Gradle基础。
+
+## Gradle基础 ##
 
 
 

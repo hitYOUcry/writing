@@ -110,11 +110,52 @@
 // a {
 //     println "I am from closure"//花括号表示一个闭包，它作为参数传给了闭包a
 // }
+class Email {
+    void from(String from){
+        println "From : ${from}" 
+    }
+
+    void to(String to){
+        println "To : ${to}"
+    }
+
+    void subject(String subject){
+        println "Subject : ${subject}"
+    }
+
+    void body(Closure c){
+        c.delegate = new EmailBody();
+        c.resolveStrategy = Closure.DELEGATE_ONLY
+        c.call()
+    }
+
+}
+
+class EmailBody {
+    void content(String content){
+        println "Content : ${content}"
+    }
+}
+
+
+void email(Closure c){
+    c.delegate = new Email();
+    c.resolveStrategy = Closure.DELEGATE_ONLY
+    c.call()
+}
+
+
 email {
     from "abc@163.com"
     to "def@qq.com"
     subject "Secret"
     body {
-        "Money is no the position, do it!"
+        content "Money is no the position, do it!"
     }
 }
+
+void mm(String a,int b){
+    println a + b
+}
+
+mm "qwe",2
