@@ -433,6 +433,28 @@ email {
 到这儿Groovy的基本语法和闭包介绍就结束了，下文继续介绍Gradle基础。
 
 ## Gradle基础 ##
+>和make/ant/maven一样，Gradle也是一个构建工具。
+Gradle的设计集成了构建工具前辈们的优点（依赖管理/约定好，灵活），构建脚本基于Groovy编写（简洁/方便），已经广泛用于Java世界（c++的Gradle插件已实现，需要Gradle4.7+）。基于Gradle的Android Gradle Plugin更是被Google指定为官方构建工具（本文主要介绍Gradle，针对Android Gradle Plugin的文章后续会推出）。
+多的不说了，总之在Java世界，特别是Android，使用Gradle构建工程已是必然选择。
+
+### 安装 ###
+首先去[这里](https://gradle.org/releases/)下载所需的Gradle版本。文件是个压缩包，解压之后把其中的bin目录添加至环境变量即可（Gradle和Groovy都基于JVM，需要先安装JDK，版本7+）。  
+在命令行执行`gradle --version`可以检验安装是否成功：
+![IMG](gradle_version.png)  
+除了上边的安装方案之外，使用Gradle还有其他的方法——使用**GradleWrapper**。
+![IMG](gradle_wrapper.png)  
+使用过AndroidStudio构建Android工程的同学应该不陌生，它在gradle的基础上包裹了一层，提供可执行文件（批处理脚本）`gradlew`和`gradlew.bat`给外部调用，并通过`gradle-wrapper.properties`设置所包裹的gralde是哪个版本。  
+GradleWrapper的好处有两点：
+- 使用方可以不用手动安装Gradle，只需在当前目录下添加几个文件（gradlew、gradlew.bat、gradle/wrapper/gradle-wrapper.jar、gradle/wrapper/gradle-wrapper.properties）即可在该目录下通过gradlew命令来使用gradle(和安装Gradle之后的gradle命令行在使用上无区别)。
+- 切换gradle的成本低。如果需要更替gradle的版本，第一种方法需要重新安装，并设置环境变量；而使用Wrapper只需要修改`gradle-wrapper.properties`文件中指定的gradle版本即可。
+
+Gradle官方推荐使用GradleWrapper方案。
+
+### 构建脚本 ###
+
+
+
+
 
 
 
