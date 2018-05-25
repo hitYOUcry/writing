@@ -1,0 +1,71 @@
+
+// task hello {
+//     println "task hello"
+// }
+
+// task "hello" {
+//     println "task hello"
+// }
+
+// task(hello){
+//     println "task hello"
+// }
+
+// task("hello"){
+//     println "task hello"
+// }
+
+// tasks.create(name:"hello") {//必须用字符串
+//     println "task hello"
+// }
+
+// task (compile){
+//     doLast{
+//         println "compile source code"
+//     }
+// }
+
+// task (genApk){
+//     doLast{
+//         println "genApk"
+//     }
+// }
+
+// task (install){
+//     doLast{
+//         println "install"
+//     }
+// }
+
+// install.dependsOn genApk
+// genApk.dependsOn compile
+
+// task (compile){
+//     doLast{
+//         println "compile source code"
+//     }
+// }
+
+// task (genApk, dependsOn:compile){
+//     doLast{
+//         println "genApk"
+//     }
+// }
+
+// task (install, dependsOn:genApk){
+//     doLast{
+//         println "install"
+//     }
+// }
+
+println "<build.gradle> configuration phase"
+
+task hello {
+    println "<build.gradle> configuration phase"
+    
+}
+
+task helloA {
+    println "<build.gradle> helloA configuration phase"
+    
+}

@@ -448,9 +448,151 @@ GradleWrapper的好处有两点：
 - 使用方可以不用手动安装Gradle，只需在当前目录下添加几个文件（gradlew、gradlew.bat、gradle/wrapper/gradle-wrapper.jar、gradle/wrapper/gradle-wrapper.properties）即可在该目录下通过gradlew命令来使用gradle(和安装Gradle之后的gradle命令行在使用上无区别)。
 - 切换gradle的成本低。如果需要更替gradle的版本，第一种方法需要重新安装，并设置环境变量；而使用Wrapper只需要修改`gradle-wrapper.properties`文件中指定的gradle版本即可。
 
-Gradle官方推荐使用GradleWrapper方案。
+Gradle官方推荐使用GradleWrapper方案(本文只是简单的示例，不涉及具体工程的构建，因此还是使用`gradle`命令进行演示)。
 
 ### 构建脚本 ###
+和c++/java/groovy类似，gradle也有自己的源文件。只是它更贴近于脚本，而且其职责是构建项目，因此我们把Gradle的.gradle源文件称为构建脚本。  
+**HelloWorld**
+安装完Gradle之后，新建build.gradle文本文件，并在其中添加
+```gradle
+task hello {
+    println "hello gradle"
+}
+```
+然后在命令行中执行`gradle hello`，即可打印出`"hello gradle"`。hello world总是简单的，好像每种语言设计之初就有一条铁律：HelloWorld写起来一定要简单。上边的简单示例有两点需要说明：
+- 文件最好是命名为`"build.gradle"`，而非`"a.gradle"`/`"b.gradle"`，因为`"build.gradle"`是默认的构建脚本文件。如果自定义脚本的文件名，则在使用命令行调用自定义命名的脚本时需要指定脚本名称`"gradle hello -b a.gradle"`
+- 整个`"build.gradle"`文件也是groovy代码，gradle在groovy的基础上又封装了一些api，所以在`"build.gradle"`中可以使用task定义任务（关于task后文细说），所以在闭包内使用groovy的println函数可以打印字符串内容
+#### 工程结构 ####
+首先我们看下使用Gradle构建一个工程时，需要哪些gradle相关的文件:
+- settings.gradle
+- build.gradle
+- gradle.properties
+以上三个文件是gradle用于构建时常接触（必然用到）到的。从文件名也能大概看出每种文件的作用：`settings.gradle`工程设置相关，配置全局变量、多project时设置每个project名称等；`build.gradle`具体的构建代码放置在该文件内，用于编写具体的构建代码；`gradle.properties`文件是配置文件，可以配置代理信息、gradle自身相关的一些设置（并行编译、使用deamon进程、jvm参数等等）以及自定义的属性。
+关于`settings.gradle`和`gradle.properties`的具体内容，后文会慢慢讲到，我们先分析专注于干活的`build.gradle`。
+
+#### Project和Task ####
+>Gradle脚本中的所有内容都基于projects和tasks这两个概念。
+- 每个使用Gradle构建的工程都是由一个或多个project构成，可以把一个`build.gradle`看成是一个Project对象(实际上就是)；
+- 每个Project由多个task组成，在`build.gradle`定义的一个个具体干活的task是实现构建的基石。
+**创建（声明）task**
+定义task的方法多样：
+```groovy
+//I
+task hello {
+    println "task hello"
+}
+
+//II
+task "hello" {
+    println "task hello"
+}
+
+//III
+task(hello){
+    println "task hello"
+}
+
+//IV
+task("hello"){
+    println "task hello"
+}
+
+//V
+tasks.create(name:"hello") {//必须用字符串
+    println "task hello"
+}
+```
+>`tasks`是Project定义的`TaskContainer`类型的对象，`TaskContainer`用来管理一组task，并提供创建、查找和替换task的方法。  
+以上是定义一个名为`hello`的task的不同写法。对于这种简单的task，个人喜欢第一种方式；实际使用时，第三中写法比较简洁也比较实用。
+
+**task之间的依赖**
+>Gradle中task和task之间存在依赖关系，当执行某个task时，首先需要执行它依赖的所有task。  
+比如我们有个install Task，它负责把apk安装到手机。那么我们首先要生成apk(genApk)，而生成apk之前又必须要编译源代码（compile）。可以看出：install需要依赖genApk，而genApk需要依赖compile。  
+且看如何指定task之间的依赖：
+```groovy
+task (compile){
+    doLast{
+        println "compile source code"
+    }
+}
+
+task (genApk){
+    doLast{
+        println "genApk"
+    }
+}
+
+task (install){
+    doLast{
+        println "install"
+    }
+}
+
+install.dependsOn genApk
+genApk.dependsOn compile
+```
+可以在task定义好之后统一指定他们之间的依赖关系，也可以在task定义时就指定它的依赖：
+```groovy
+task (compile){
+    doLast{
+        println "compile source code"
+    }
+}
+
+task (genApk, dependsOn:compile){
+    doLast{
+        println "genApk"
+    }
+}
+
+task (install, dependsOn:genApk){
+    doLast{
+        println "install"
+    }
+}
+```
+>在一次task的执行过程中，涉及到的每个task都只会被执行一次。
+类似的场景在项目构建时会非常常见，因此Gradle会根据task之间的依赖关系构建有向无环图（意味着不能存在循环依赖），辅助后续task执行。(了解过BUCK构建工具的同学对这种使用有向无环图结构组织最小执行单元的行为应该不陌生，不过现在Gradle这么火，BUCK应该是凉了)  
+**构建过程的生命周期**
+每个Gradle构建任务的执行过程都可以分为三个阶段：初始化(Initialization)、配置(Configuration)和执行(Execution)。
+- 初始化(Initialization)：这个过程的主要目的是在多Project情况下指定参与构建的Project，并为参与构建的project生成project对象。`setting.gradle`文件中的内容即是在初始化阶段进行。
+- 配置(Configuration):配置过程主要工作就是分析每个project中定义的task，并生成我们上节讲到的task之间的DAG依赖图。
+- 执行阶段：这个阶段，Gradle会根据所有task的DAG以及需要执行的task，得到最终需要被执行的一个task集合，并依照依赖关系执行他们。
+
+看个示例：
+`setting.gradle`文件：
+```groovy
+println "<settings.gradle> init"
+```
+只有一行代码。`build.gradle`文件：
+```groovy
+println "<build.gradle> configuration phase"
+
+task hello {
+    println "<build.gradle> configuration phase"
+    doLast {
+        println "<build.gradle> execution phase"
+    }
+}
+```
+定义了一个hello Task，并在不同位置打印了一些语句。
+当执行`gradle`，并不指定执行task时，我们可以看到如下输出：
+![IMG](gradle_lifecycle_1.png)  
+
+当执行`gradle hello`时，可以看到如下输出：
+![IMG](gradle_lifecycle_2.png)  
+
+可以看到，在task的花括号内定义的代码以及在`build.gradle`脚本最外层写的代码，在configuration阶段会被执行（意味着，当执行其他task时，这部分代码也会被执行），task的doLast(同理还有doFirst)内的代码会在正真执行task的时候才会被执行到。
+**生命周期监听**
+Gradle的构建过程不像Ant那样完全由用户掌握，所以Gradle提供了一些方法来让用户方便的把自己的代码插入到整个构建过程中。
+在project评估结束、task的DAG生成完成、task创建、task执行等等时间节点上都可以通过类似于注册回调的方式监听这些过程：
+
+
+
+
+1.构建工程结构
+2.Project和Task
+3.
 
 
 
