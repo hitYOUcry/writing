@@ -585,7 +585,44 @@ task hello {
 可以看到，在task的花括号内定义的代码以及在`build.gradle`脚本最外层写的代码，在configuration阶段会被执行（意味着，当执行其他task时，这部分代码也会被执行），task的doLast(同理还有doFirst)内的代码会在正真执行task的时候才会被执行到。
 **生命周期监听**
 Gradle的构建过程不像Ant那样完全由用户掌握，所以Gradle提供了一些方法来让用户方便的把自己的代码插入到整个构建过程中。
-在project评估结束、task的DAG生成完成、task创建、task执行等等时间节点上都可以通过类似于注册回调的方式监听这些过程：
+在project评估结束、task的DAG生成完成、task创建、task执行等等时间节点上都可以通过类似于注册回调的方式监听这些过程。
+监听task创建:
+```groovy
+tasks.whenTaskAdded { task -> 
+    println "task :${task.name} added" 
+}
+
+task compile { }
+
+task build { }
+
+task deploy { }
+```
+
+监听Project的配置(Configuration/Evaluate)完成：
+```groovy
+allprojects {
+    afterEvaluate { project -> 
+        //do what you want with project obj.
+        if(project.tasks.contains(test)){
+            println "${project} has test task!"
+        }
+
+    }
+}
+```
+> 这个回调很实用。经常会在这里插入task、指定task之间的执行顺序（依赖关系）、根据脚本的配置参数值选择构建类型等等。
+
+Gradle构建过程的监听还有很多，这里不一一举例，希望读者有这样的概念，可以侵入构建过程实现自己的逻辑。具体的监听方式可能是文中的描述的也可能是未列举的。
+
+### Gradle插件 ###
+> 所有编程语言都只是提供一个平台和一些特性，要转换成生产力，需要码农的二次开发。
+如果让使用者自己去实现一次构建所需的全部task，那Gradle就凉凉了。所以，Gradle官方维护了很多针对不同工程构建所需的插件，通过这些插件可以轻松的实现对应工程的构建和配置，比如专门为Android工程定值的Android Gradle Plugin、为Java工程构建准备的
+Java Plugin等。  
+正是这些插件使Gradle变得强大好用。这里我们不去分析任何一种官方插件的使用和它所实现的DSL配置，而是探究如何去实现Gradle插件。
+
+
+
 
 
 

@@ -58,14 +58,34 @@
 //     }
 // }
 
-println "<build.gradle> configuration phase"
+// println "<build.gradle> configuration phase"
 
-task hello {
-    println "<build.gradle> configuration phase"
+// task hello {
+//     println "<build.gradle> configuration phase"
     
+// }
+
+// task helloA {
+//     println "<build.gradle> helloA configuration phase"
+    
+// }
+tasks.whenTaskAdded { task -> 
+    println "task :${task.name} added" 
 }
 
-task helloA {
-    println "<build.gradle> helloA configuration phase"
-    
+task compile { }
+
+task build { }
+
+task deploy { }
+
+allprojects {
+    afterEvaluate { project -> 
+        if(project.tasks.contains(test)){
+            println "${project} has test task!"
+        }
+
+    }
 }
+
+task test { }
