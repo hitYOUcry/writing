@@ -69,23 +69,43 @@
 //     println "<build.gradle> helloA configuration phase"
     
 // }
-tasks.whenTaskAdded { task -> 
-    println "task :${task.name} added" 
-}
+// tasks.whenTaskAdded { task -> 
+//     println "task :${task.name} added" 
+// }
 
-task compile { }
+// task compile { }
 
-task build { }
+// task build { }
 
-task deploy { }
+// task deploy { }
 
-allprojects {
-    afterEvaluate { project -> 
-        if(project.tasks.contains(test)){
-            println "${project} has test task!"
+// allprojects {
+//     afterEvaluate { project -> 
+//         if(project.tasks.contains(test)){
+//             println "${project} has test task!"
+//         }
+
+//     }
+// }
+
+// task test { }
+
+buildscript {
+    repositories {
+        maven {
+            url uri('C:\\Users\\Nemo\\Desktop\\Lifecycle\\repo')
         }
+    }
 
+    dependencies {
+        //注意我们在插件实现工程中定义的group和version
+        //classpath的作用就是指出jar的完整路径
+        classpath 'com.tencent.nemo:printlib:1.0.0'
     }
 }
 
-task test { }
+apply plugin: 'com.tencent.plugin'
+
+// PrintMsg {
+//     msg = "1234567890"
+// }

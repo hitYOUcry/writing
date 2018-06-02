@@ -1,0 +1,16 @@
+class PrintExtension {
+    String msg = "did you miss me?"
+}
+
+class PrintPlugin implements Plugin<Project> {
+    void apply(Project project){
+        def ext = project.extensions.create('PrintMsg',PrintExtension)
+        Task print = project.task('print'){
+            doLast {
+                println ext.msg
+            }
+        }
+        project.tasks.add(print)
+    }
+}
+apply plugin: PrintPlugin

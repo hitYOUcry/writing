@@ -611,44 +611,225 @@ allprojects {
     }
 }
 ```
-> 这个回调很实用。经常会在这里插入task、指定task之间的执行顺序（依赖关系）、根据脚本的配置参数值选择构建类型等等。
+这个回调很实用。经常会在这里插入task、指定task之间的执行顺序（依赖关系）、根据脚本的配置参数值选择构建类型等等。
 
 Gradle构建过程的监听还有很多，这里不一一举例，希望读者有这样的概念，可以侵入构建过程实现自己的逻辑。具体的监听方式可能是文中的描述的也可能是未列举的。
 
 ### Gradle插件 ###
-> 所有编程语言都只是提供一个平台和一些特性，要转换成生产力，需要码农的二次开发。
+> 所有编程语言都只是提供一个平台和一些特性，要转换成生产力，需要码农的二次开发。  
+
+在Gradle的官网上有这么一段话：  
+> Gradle at its core intentionally provides very little for real world automation. All of the useful features, like the ability to compile Java code, are added by _`plugins`_.
+
+大致含义：  
+>在实际的自动化构建中，gradle核心本身并没有提供什么功能。所有使用的特性，比如能够编译Java代码的能力，都是由插件提供。
+
 如果让使用者自己去实现一次构建所需的全部task，那Gradle就凉凉了。所以，Gradle官方维护了很多针对不同工程构建所需的插件，通过这些插件可以轻松的实现对应工程的构建和配置，比如专门为Android工程定值的Android Gradle Plugin、为Java工程构建准备的
 Java Plugin等。  
-正是这些插件使Gradle变得强大好用。这里我们不去分析任何一种官方插件的使用和它所实现的DSL配置，而是探究如何去实现Gradle插件。
+正是这些插件使Gradle变得强大好用，所以聊到gradle，不得不介绍如何使用、制作gradle插件，这会很有用。
+#### 插件是怎么用的 ####
+这个问题很好找到答案，随便打开一个AS工程，点开工程中某个Module（或者新建一个Module）的build.gradle文件，第一行代码：
+```gradle 
+apply plugin: 'com.android.application' //app module
+apply plugin: 'com.android.library' // app library module
+```
+如上，使用`apply plugin` + 插件名（插件id）的语法即可表示，在当前脚本中引用某个插件，也即在当前脚本内可以使用该插件所提供的Task。
+至于为什么我们在Module工程的gradle脚本里可以使用`'com.android.application'/'com.android.library'`插件，答案在项目更目录（module的外一层）下的build.gradle脚本中指明了仓库和插件的来源:
+```gradle
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.0.1'
+        
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+```
+脚本中指明了使用google和jcenter仓库，并且依赖中包含了`com.android.tools.build:gradle:3.0.1`这样gradle便能在对应的仓库中找到对应的插件（其实是个jar包），并添加到gradle工程的classpath中，其他的gradle脚本就可以引用到这个插件。  
+#### 如何制作一个插件 ####
+Gradle提供了接口`org.gradle.api.Plugin`:
+```java
+package org.gradle.api;
+
+/**
+ * <p>A <code>Plugin</code> represents an extension to Gradle. A plugin applies some configuration to a target object.
+ * Usually, this target object is a {@link org.gradle.api.Project}, but plugins can be applied to any type of
+ * objects.</p>
+ *
+ * @param <T> The type of object which this plugin can configure.
+ */
+public interface Plugin<T> {
+    /**
+     * Apply this plugin to the given target object.
+     *
+     * @param target The target object
+     */
+    void apply(T target);
+}
+```
+插件制作者只需完成两件事：1.实现这个接口以及自己定义的插件功能逻辑；2.让使用方可以引用到该的插件，即可完成插件的制作。  
+实际来说，完成插件制作的两件事可以很简单，也可能会比较麻烦，取决于该插件的功能和受众。如果插件仅是一个很简单的功能（逻辑代码不复杂），而且作者的目的是为了在某个脚本中用一下而已，这时可以把插件定义的代码直接写在某个Gradle脚本中，其他gradle脚本引用该gradle脚本即可；如果插件逻辑比较复杂，比如：安卓项目构建中的`'com.android.application'/'com.android.library'`插件，就不适合在gradle脚本中编写逻辑代码了，同时，这个插件是面向所有使用AS用户的，还需要发布到中央仓库中去，让使用者方便引用。
+话不多说，下边我们来看这两种插件制作过程是怎么样的。
+##### 在gradle脚本中定义插件 #####
+首先我们明确一下将要制作的插件的功能：
+- 拥有一个`print`Task，引用该插件后可以直接调用`print`Task
+- 拥有一个名为`PrintMsg`的配置块，该配置块拥有`msg`参数可以配置，配置之后`print`Task即可答应出msg的内容
+第一步：新建`print.gradle`文件，并在其中条件如下插件代码：
+```gradle
+class PrintExtension {
+    String msg = "did you miss me?"
+}
+
+class PrintPlugin implements Plugin<Project> {
+    void apply(Project project){
+        def ext = project.extensions.create('PrintMsg',PrintExtension)
+        Task print = project.task('print'){
+            doLast {
+                println ext.msg
+            }
+        }
+        project.tasks.add(print)
+    }
+}
+apply plugin: PrintPlugin
+```
+代码很简单，其中project对象的extensions字段是一个ExtensionContainer类型的对象，通过它可以快速实现扩展参数的设置，使用很方便。（ExtensionContainer的实现细节不是本文的重点，有兴趣的同学移步Gradle源码）
+最后一句`apply plugin: PrintPlugin`即是使用`PrintPlugin`插件的意思。
+第二步：在`build.gradle`中通过引用`print.gradle`脚本，并使用`print`Task和`PrintMsg`配置块：
+```gradle
+apply from: 'print.gradle'
+
+PrintMsg {
+    msg = "1234567890"
+}
+```
+执行结果：  
+![IMG](print_task.png)  
+是不是很简单？下边我们看如果要制作一个较为复杂的插件，如何利用AndroidStudio IDE实现。
+##### 在AndroidStudio中制作插件 #####
+插件制作的第一步说到底是groovy代码编写（gradle基于groovy实现），在AndroidStudio可以方便的实现Groovy工程构建；第二部上传插件到远程仓库也可以通过Gradle Task实现，所以使用AndroidStudio IDE来制作插件很合适。
+第一步：新建工程。在某个Android工程中新建一个Java Module，并修改它的build.gradle文件即可。工程结构和Gradle脚本内容如下：  
+![IMG](print_plugin_project_struct.png)  
+`build.gradle`：
+```gradle
+apply plugin: 'groovy'
+apply plugin: 'maven'
+
+dependencies {
+    compile gradleApi()
+    compile localGroovy()
+}
+
+repositories {
+    mavenCentral()
+}
+
+group='com.tencent.nemo'
+version='1.0.0'
+
+//发布到中央仓库审核验证比较麻烦
+//作为示例，我们的jar发布到本地路径下即可
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: uri('../repo'))
+        }
+    }
+}
+```
+第二步：实现插件代码。  
+这个过程就是把插件的逻辑用代码描述，对于示例中要实现的插件，我们把上边写在Gradle脚本中的代码挪到对应的groovy文件中即可：
+`PrintPlugin.groovy`:
+```groovy
+package com.tencent.nemo
+
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
+
+class PrintPlugin implements Plugin<Project>{
+    @Override
+    void apply(Project project) {
+        def ext = project.extensions.create("PrintMsg",PrintExtension);
+        Task print = project.task('print'){
+            doLast {
+                println ext.msg
+            }
+        }
+        project.tasks.add(print)
+    }
+}
+
+```
+
+`PrintExtension.groovy`:
+```groovy
+package com.tencent.nemo
+
+class PrintExtension {
+    public String msg = "did you miss me?"
+}
+
+```
+
+第三步：配置插件信息。
+代码写好了，总要取个名字吧，不然使用者怎么引用这个插件呢？
+gradle的插件命名比较特别，依赖于jar架包中META_INF.gradle-plugins下的XXX.properties文件，其中XXX即是插件的id，可以理解问就是插件的名字了，而这个文件中的内容指定了入口类的全名。  
+我给插件取名为：`com.tencent.print`，因此我需要在groovy工程中添加`META-INF/gradle-plugins`目录（注意这里需要先新建`META-INF`再在其下新建子目录`gradle-plugins`）和`com.tencent.print.properties`文件。`META-INF/gradle-plugins/com.tencent.print.properties`内容如下：
+```txt
+implementation-class=com.tencent.nemo.PrintPlugin
+```
+第四步：上传jar包。
+一切准备就绪，把代码打成jar并发布到本地某个路径下。这个操作由gradle Task完成，代码已经在工程build.gradle文件中有展示：
+```gradle
+//发布到中央仓库审核验证比较麻烦
+//作为示例，我们的jar发布到本地路径下即可
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: uri('../repo'))
+        }
+    }
+}
+```
+这里就是把架包发布到工程根目录下的repo文件夹下，运行`uploadArchives`task，结果如下：
+![IMG](print_plugin_jar.png) 
+
+第五步：使用。
+简单点，我们使用绝对路径应用这个架包所在的仓库，并通过我们之前定义的插件名称来使用新鲜出炉的插件。使用方的build.gradle文件如下：
+```gradle
+buildscript {
+    repositories {
+        maven {
+            url uri('C:\\Users\\Nemo\\Desktop\\Lifecycle\\repo')
+        }
+    }
+
+    dependencies {
+        //注意我们在插件实现工程中定义的group和version
+        //classpath的作用就是指出jar的完整路径
+        classpath 'com.tencent.nemo:printlib:1.0.0'
+    }
+}
+
+apply plugin: 'com.tencent.plugin'
+
+PrintMsg {
+    msg = "1234567890"
+}
+```
+执行结果和在gradle脚本定义的插件一致：  
+![IMG](plugin_by_project.png)    
 
 
 
-
-
-
-
-1.构建工程结构
-2.Project和Task
-3.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## 后记 ##
+至此，Groovy和Gradle基础就介绍完了，希望坚持看到这儿的你能有所收获。  
