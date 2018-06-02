@@ -439,9 +439,9 @@ Gradle的设计集成了构建工具前辈们的优点（依赖管理/约定好�
 
 ### 安装 ###
 首先去[这里](https://gradle.org/releases/)下载所需的Gradle版本。文件是个压缩包，解压之后把其中的bin目录添加至环境变量即可（Gradle和Groovy都基于JVM，需要先安装JDK，版本7+）。  
-在命令行执行`gradle --version`可以检验安装是否成功：
+在命令行执行`gradle --version`可以检验安装是否成功：  
 ![IMG](gradle_version.png)  
-除了上边的安装方案之外，使用Gradle还有其他的方法——使用**GradleWrapper**。
+除了上边的安装方案之外，使用Gradle还有其他的方法——使用**GradleWrapper**。  
 ![IMG](gradle_wrapper.png)  
 使用过AndroidStudio构建Android工程的同学应该不陌生，它在gradle的基础上包裹了一层，提供可执行文件（批处理脚本）`gradlew`和`gradlew.bat`给外部调用，并通过`gradle-wrapper.properties`设置所包裹的gralde是哪个版本。  
 GradleWrapper的好处有两点：
@@ -579,7 +579,7 @@ task hello {
 当执行`gradle`，并不指定执行task时，我们可以看到如下输出：
 ![IMG](gradle_lifecycle_1.png)  
 
-当执行`gradle hello`时，可以看到如下输出：
+当执行`gradle hello`时，可以看到如下输出：  
 ![IMG](gradle_lifecycle_2.png)  
 
 可以看到，在task的花括号内定义的代码以及在`build.gradle`脚本最外层写的代码，在configuration阶段会被执行（意味着，当执行其他task时，这部分代码也会被执行），task的doLast(同理还有doFirst)内的代码会在正真执行task的时候才会被执行到。
@@ -677,11 +677,11 @@ public interface Plugin<T> {
 ```
 插件制作者只需完成两件事：1.实现这个接口以及自己定义的插件功能逻辑；2.让使用方可以引用到该的插件，即可完成插件的制作。  
 实际来说，完成插件制作的两件事可以很简单，也可能会比较麻烦，取决于该插件的功能和受众。如果插件仅是一个很简单的功能（逻辑代码不复杂），而且作者的目的是为了在某个脚本中用一下而已，这时可以把插件定义的代码直接写在某个Gradle脚本中，其他gradle脚本引用该gradle脚本即可；如果插件逻辑比较复杂，比如：安卓项目构建中的`'com.android.application'/'com.android.library'`插件，就不适合在gradle脚本中编写逻辑代码了，同时，这个插件是面向所有使用AS用户的，还需要发布到中央仓库中去，让使用者方便引用。
-话不多说，下边我们来看这两种插件制作过程是怎么样的。
+下边我们来看这两种插件制作过程是怎么样的。
 ##### 在gradle脚本中定义插件 #####
 首先我们明确一下将要制作的插件的功能：
-- 拥有一个`print`Task，引用该插件后可以直接调用`print`Task
-- 拥有一个名为`PrintMsg`的配置块，该配置块拥有`msg`参数可以配置，配置之后`print`Task即可答应出msg的内容
+- 拥有一个`print` Task，引用该插件后可以直接调用`print` Task
+- 拥有一个名为`PrintMsg`的配置块，该配置块拥有`msg`参数可以配置，配置之后`print` Task即可答应出msg的内容
 第一步：新建`print.gradle`文件，并在其中条件如下插件代码：
 ```gradle
 class PrintExtension {
@@ -702,7 +702,7 @@ class PrintPlugin implements Plugin<Project> {
 apply plugin: PrintPlugin
 ```
 代码很简单，其中project对象的extensions字段是一个ExtensionContainer类型的对象，通过它可以快速实现扩展参数的设置，使用很方便。（ExtensionContainer的实现细节不是本文的重点，有兴趣的同学移步Gradle源码）
-最后一句`apply plugin: PrintPlugin`即是使用`PrintPlugin`插件的意思。
+最后一句`apply plugin: PrintPlugin`即是使用`PrintPlugin`插件的意思。  
 第二步：在`build.gradle`中通过引用`print.gradle`脚本，并使用`print`Task和`PrintMsg`配置块：
 ```gradle
 apply from: 'print.gradle'
@@ -713,10 +713,10 @@ PrintMsg {
 ```
 执行结果：  
 ![IMG](print_task.png)  
-是不是很简单？下边我们看如果要制作一个较为复杂的插件，如何利用AndroidStudio IDE实现。
+是不是很简单？下边我们看如何利用AndroidStudio IDE实现这个插件。
 ##### 在AndroidStudio中制作插件 #####
 插件制作的第一步说到底是groovy代码编写（gradle基于groovy实现），在AndroidStudio可以方便的实现Groovy工程构建；第二部上传插件到远程仓库也可以通过Gradle Task实现，所以使用AndroidStudio IDE来制作插件很合适。
-第一步：新建工程。在某个Android工程中新建一个Java Module，并修改它的build.gradle文件即可。工程结构和Gradle脚本内容如下：  
+第一步：新建工程。在某个Android工程中新建一个Module（Java Module即可，后续手动的修改源码文件夹名称），并修改它的build.gradle文件即可。工程结构和Gradle脚本内容如下：  
 ![IMG](print_plugin_project_struct.png)  
 `build.gradle`：
 ```gradle
@@ -746,7 +746,7 @@ uploadArchives {
 }
 ```
 第二步：实现插件代码。  
-这个过程就是把插件的逻辑用代码描述，对于示例中要实现的插件，我们把上边写在Gradle脚本中的代码挪到对应的groovy文件中即可：
+这个过程就是把插件的逻辑用代码描述，对于示例中要实现的插件，我们把上边写在Gradle脚本中的代码挪到对应的groovy文件中即可。  
 `PrintPlugin.groovy`:
 ```groovy
 package com.tencent.nemo
@@ -780,9 +780,9 @@ class PrintExtension {
 
 ```
 
-第三步：配置插件信息。
-代码写好了，总要取个名字吧，不然使用者怎么引用这个插件呢？
-gradle的插件命名比较特别，依赖于jar架包中META_INF.gradle-plugins下的XXX.properties文件，其中XXX即是插件的id，可以理解问就是插件的名字了，而这个文件中的内容指定了入口类的全名。  
+第三步：配置插件信息。  
+插件代码写好了，给它取个名字吧，不然使用者怎么引用这个插件呢？
+gradle的插件命名比较特别，依赖于jar架包中META_INF/gradle-plugins下的XXX.properties文件，其中XXX即是插件的id，可以理解为插件的名字，而这个文件中的内容指定了插件入口类的全名。  
 我给插件取名为：`com.tencent.print`，因此我需要在groovy工程中添加`META-INF/gradle-plugins`目录（注意这里需要先新建`META-INF`再在其下新建子目录`gradle-plugins`）和`com.tencent.print.properties`文件。`META-INF/gradle-plugins/com.tencent.print.properties`内容如下：
 ```txt
 implementation-class=com.tencent.nemo.PrintPlugin
@@ -800,10 +800,10 @@ uploadArchives {
     }
 }
 ```
-这里就是把架包发布到工程根目录下的repo文件夹下，运行`uploadArchives`task，结果如下：
+这里就是把架包发布到工程根目录下的repo文件夹下，运行`uploadArchives` task，结果如下：
 ![IMG](print_plugin_jar.png) 
 
-第五步：使用。
+第五步：使用。  
 简单点，我们使用绝对路径应用这个架包所在的仓库，并通过我们之前定义的插件名称来使用新鲜出炉的插件。使用方的build.gradle文件如下：
 ```gradle
 buildscript {
