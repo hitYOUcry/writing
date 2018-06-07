@@ -1,0 +1,2 @@
+URL:https://www.jianshu.com/p/953475cea991
+本文介绍安卓应用的安装过程。文章结合源码讲述apk安装过程中的apk复制、签名校验、四大组件解析、dexopt操作、更新权限信息以及发送ACTION_PACKAGE_ADDED的全过程。通过文章的阅读可以对apk的安装过程的主要步骤有所了解。
