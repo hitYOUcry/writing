@@ -1,12 +1,17 @@
 package com.tencent.strategy;
 
+import static com.tencent.strategy.StrategyTest.CarType.EXPRESS_CAR;
+import static com.tencent.strategy.StrategyTest.CarType.FREE_RIDE_CAR;
+import static com.tencent.strategy.StrategyTest.CarType.LUXURY_CAR;
+import static com.tencent.strategy.StrategyTest.CarType.SHARING_CAR;
+import static com.tencent.strategy.StrategyTest.CarType.SPECIAL_CAR;
+
 /**
  * @author nemoqjzhang
  * @date 2018/7/23 21:50.
  */
 
 public class StrategyTest {
-
 
     /**
      * 车类型
@@ -23,7 +28,7 @@ public class StrategyTest {
      * @param distance km
      * @return
      */
-    private float calPrice(float distance, CarType carType) {
+    private static float getPrice(float distance, CarType carType) {
         float price = 0.0f;
         switch (carType) {
             case LUXURY_CAR:
@@ -46,6 +51,24 @@ public class StrategyTest {
                 break;
         }
         return price;
+    }
+
+    public static void main(String[] args) {
+        float distance = 12.5f;
+        float price = getPrice(distance,EXPRESS_CAR);
+        System.out.println("ExpressCarPrice:" + price);
+
+        price = getPrice(distance,SPECIAL_CAR);
+        System.out.println("SpecialCarPrice:" + price);
+
+        price = getPrice(distance,LUXURY_CAR);
+        System.out.println("LuxuryCarPrice:" + price);
+
+        price = getPrice(distance,FREE_RIDE_CAR);
+        System.out.println("FreeRideCarPrice:" + price);
+
+        price = getPrice(distance,SHARING_CAR);
+        System.out.println("SharingCarPrice:" + price);
     }
 
 }
