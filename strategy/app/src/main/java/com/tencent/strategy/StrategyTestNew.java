@@ -85,28 +85,6 @@ public class StrategyTestNew {
     }
 
 
-   /* *//**
-     * 车类型
-     *//*
-    public enum CarType {
-        EXPRESS_CAR(new ExpressCarPriceCalculator()),
-        SPECIAL_CAR(new SpecialCarPriceCalculator()),
-        LUXURY_CAR(new LuxuryCarPriceCalculator()),
-        FREE_RIDE_CAR(new FreeRideCarPriceCalculator()),
-        SHARING_CAR(new SharingCarPriceCalculator());
-
-        private IPriceCalculator calculator;
-
-        CarType(IPriceCalculator calculator){
-            this.calculator = calculator;
-        }
-
-        public IPriceCalculator getCalculator() {
-            return calculator;
-        }
-    }
-*/
-
     public static void main(String[] args) {
         CarPriceCalculatorManager priceManager = new CarPriceCalculatorManager();
         float distance = 12.5f;
