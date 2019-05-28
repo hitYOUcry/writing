@@ -1,0 +1,4 @@
+ANR 日志分析：
+
+1.根据log定位出现ANR位置；
+2.根据Trance文件分析：CPU使用情况（user kernal iowait）/线程状态 /堆栈及锁情况。
